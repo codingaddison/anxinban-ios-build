@@ -10,10 +10,10 @@ on:
       ref:
         description: Branch, tag or commit of zeroleafx/AnXinBan-Taiwanese-Assitant
         required: true
-        default: feat/breeze
+        default: main
 
 concurrency:
-  group: build-ipa-${{ inputs.ref || 'feat/breeze' }}
+  group: build-ipa-${{ inputs.ref || 'main' }}
   cancel-in-progress: true
 
 permissions:
@@ -24,7 +24,7 @@ jobs:
     runs-on: macos-latest
     timeout-minutes: 60
     env:
-      SOURCE_REF: ${{ inputs.ref || 'feat/breeze' }}
+      SOURCE_REF: ${{ inputs.ref || 'main' }}
     steps:
       - name: Get the app's code
         uses: actions/checkout@v4

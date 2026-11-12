@@ -8,7 +8,7 @@ This repository holds only the build setup, no app code.
 ## 做一個新的安裝檔
 
 Actions → **Build iPhone install file** → **Run workflow**，填要編的分支
-（預設 `feat/breeze`）。大約 15 到 30 分鐘，做好後在那一次執行的頁面下方
+（預設 `main`）。大約 15 到 30 分鐘，做好後在那一次執行的頁面下方
 Artifacts 下載 `AnXinBan-xxxxxxx`（下載下來是 zip，解開就是 `.ipa`）。
 
 ## 裝到 iPhone（Windows）
