@@ -1,0 +1,85 @@
+name: Build iPhone install file
+
+# Builds an unsigned .ipa of 安心BAN from the team repository, to install with
+# Sideloadly (which signs it with your own Apple ID).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Branch, tag or commit of zeroleafx/AnXinBan-Taiwanese-Assitant
+        required: true
+        default: feat/breeze
+
+concurrency:
+  group: build-ipa-${{ inputs.ref || 'feat/breeze' }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  ipa:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      SOURCE_REF: ${{ inputs.ref || 'feat/breeze' }}
+    steps:
+      - name: Get the app's code
+        uses: actions/checkout@v4
+        with:
+          repository: zeroleafx/AnXinBan-Taiwanese-Assitant
+          ref: ${{ env.SOURCE_REF }}
+
+      - name: Use the newest Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      # The same Flutter as the team (see .metadata in the app repository).
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.47.9
+          channel: stable
+          cache: true
+
+      - name: Use Swift Package Manager like the team does
+        run: flutter config --enable-swift-package-manager
+
+      - name: Get the speech framework (whisper.xcframework)
+        run: bash tool/prepare_breeze_ios.sh
+
+      - name: Get packages
+        run: flutter pub get
+
+      - name: Build without signing
+        run: flutter build ios --release --no-codesign
+
+      - name: Pack the .ipa
+        id: pack
+        run: |
+          sha=$(git rev-parse --short HEAD)
+          name="AnXinBan-${sha}"
+          mkdir -p out/Payload
+          cp -R build/ios/iphoneos/Runner.app out/Payload/
+          (cd out && zip -qry "${name}.ipa" Payload)
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+          {
+            echo "### ${name}.ipa"
+            echo
+            echo "- From: zeroleafx/AnXinBan-Taiwanese-Assitant, ${SOURCE_REF} at $(git rev-parse HEAD)"
+            echo "- Last change: $(git log -1 --format='%s (%an, %ad)' --date=format:'%Y-%m-%d %H:%M')"
+            echo "- Size: $(du -h "out/${name}.ipa" | cut -f1)"
+            echo
+            echo "Unsigned: install it with Sideloadly and your Apple ID."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the .ipa
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.pack.outputs.name }}
+          path: out/${{ steps.pack.outputs.name }}.ipa
+          retention-days: 14
+          if-no-files-found: error
